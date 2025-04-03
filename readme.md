@@ -1,12 +1,12 @@
 ## chrome 插件
 
-[What Font - find font](https://link.juejin.cn/?target=https%3A%2F%2Fchrome.google.com%2Fwebstore%2Fdetail%2Fwhat-font-find-font%2Fdjgfpbegnihdgbngpmhjnlchgglngcdn)
+[What Font - find font](https://chromewebstore.google.com/detail/whatfont/jabopobgcpjmedljpbcaablpmlmfcogm?hl=zh-CN)
 
-[CSS Peeper](https://link.juejin.cn/?target=https%3A%2F%2Fchrome.google.com%2Fwebstore%2Fdetail%2Fcss-peeper%2Fmbnbehikldjhnfehhnaidhjhoofhpehk)
+[CSS Peeper](https://chromewebstore.google.com/detail/css-peeper/mbnbehikldjhnfehhnaidhjhoofhpehk)
 
-[Image downloader](https://link.juejin.cn/?target=https%3A%2F%2Fchrome.google.com%2Fwebstore%2Fdetail%2Fimage-downloader%2Fkdbfjpagopjjaiofmgodphiklmjhcnok)
+[Image downloader](https://chromewebstore.google.com/detail/empty-title/djgfpbegnihdgbngpmhjnlchgglngcdn)
 
-[FeHelper](https://link.juejin.cn/?target=https%3A%2F%2Fchrome.google.com%2Fwebstore%2Fdetail%2Ffehelper%E5%89%8D%E7%AB%AF%E5%8A%A9%E6%89%8B%2Fpkgccpejnmalmdinmhkkfafefagiiiad)
+[FeHelper](https://chromewebstore.google.com/detail/fehelper%E5%89%8D%E7%AB%AF%E5%8A%A9%E6%89%8B/pkgccpejnmalmdinmhkkfafefagiiiad)
 
 ## index.html通过script加载js文件
 
@@ -64,7 +64,7 @@ loadTMap()
 
 ## 小程序原生实现ai问答
 
-markdown插件：towxml
+markdown插件：[towxml](https://github.com/sbfkcel/towxml)
 
 html
 
@@ -134,7 +134,7 @@ aiSearch() {
     const trimSessionMarkers = (result) => {
       result = result.replace(/会话开始/g, "");
       result = result.replace(/会话完成/g, "");
-      result = result.replace(/data:/g, "");
+      result = result.replace(/data: /g, "");
       return result;
     }
 
@@ -236,5 +236,231 @@ onPageScroll: function (e) {
     }
   })
 }
+```
+
+## vue3实现AI聊天
+
+插件：`markdown-it`   `github-markdown-css`
+
+main.js引入入markdown样式：需要的设置样式的div class 设置 markdown-body
+
+```js
+import 'github-markdown-css'
+
+  <div class="markdown-body"></div>
+```
+
+markdown语法
+
+```js
+  import MarkdownIt from 'markdown-it'
+  const md = new MarkdownIt()
+  <div v-html="md.render(markdownText)" class="markdown-body"></div>
+```
+
+流式接口请求：
+
+```js
+  const fetchStream = async () => {
+    try {
+      controller.value = new AbortController() // 创建新控制器
+      isFetching.value = true
+
+      let data = {
+        userId: '00022a00-11ae-d045-0a41-3511ff8b9fc0',
+        model: 'deepseek-chat',
+        content: oldContent.value,
+      }
+      let url = 'https://llm.sjrt.net/api/LLMCenter/AiChat'
+      // 1. 发起请求并获取响应
+      const response = await fetch(url, {
+        method: 'POST',
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.value.signal, // 添加中止信号
+        body: JSON.stringify(data),
+      })
+
+      // 2. 获取可读流
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder() // 用于将二进制数据解码为字符串
+
+      // 循环读取数据
+      while (true) {
+        const { done, value } = await reader.read()
+
+        // 如果流结束，退出循环
+        if (done) break
+
+        // 3. 处理数据块（此处将二进制数据转为字符串）
+        const chunk = decoder.decode(value, { stream: true }).replace(/data: /g, '')
+        // console.log('Received chunk:', chunk)
+
+        if (chunk.indexOf('会话开始') != -1 || chunk.indexOf('会话完成') != -1) continue
+        isThinking.value = false
+        end()
+        contentText.value += chunk // 追加到原始文本
+        resume()
+      }
+
+      console.log('Stream finished')
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('请求被用户终止', contentText.value)
+        if (contentText.value == '') contentText.value = '思考已停止'
+      } else {
+        console.error('请求出错:', err)
+      }
+    } finally {
+      console.log('finally', contentText.value)
+      isFetching.value = false
+      controller.value = null
+      isThinking.value = false
+      addRecords()
+      end()
+    }
+  }
+```
+
+## 3d饼图
+
+main.js引入 highcharts
+
+```bash
+npm install highcharts highcharts-vue
+```
+
+```js
+import HighchartsVue from 'highcharts-vue'
+import Highcharts from "highcharts/highcharts";
+
+app.use(HighchartsVue)
+```
+
+不同高度的3d饼图
+
+```js
+<highcharts :options="chartOptions"></highcharts>
+
+  const data = ref([
+    ['城市', 0.18, '#FFFFFF'],
+    ['城镇', 0.39, '#4EEDF9'],
+    ['村落', 0.43, '#FFDF9E'],
+  ])
+
+  const chartOptions = ref({
+    chart: {
+      type: 'pie',
+      options3d: {
+        enabled: true,
+        alpha: 75,
+      },
+      backgroundColor: 'transparent',
+    },
+    tooltip: {
+      backgroundColor: '#fff',
+      enabled: true, // 确保启用提示框
+      formatter: function () {
+        return `<b>${this.point.name}</b>: ${(this.point.y * 100).toFixed(1)}%`
+      },
+      style: {
+        color: '#333', // 文字颜色
+        fontSize: '14px',
+      },
+    },
+    colors: data.value.map(item => item[2]),
+    title: {
+      text: '',
+      style: {
+        display: 'none',
+      },
+    },
+    credits: {
+      enabled: false, //去掉hightchats水印
+    },
+    // subtitle: {
+    //   text: '3D donut in Highcharts',
+    // },
+    plotOptions: {
+      pie: {
+        // 圆环，0为饼
+        innerSize: '85%',
+        depth: 20,
+        dataLabels: {
+          enabled: false,
+        },
+      },
+    },
+    allowPointSelect: true,
+    // 给数据设置不同高度
+    series: [
+      {
+        name: '',
+        data: data.value.map(item => ({
+          name: item[0],
+          y: item[1],
+          depth: item[1] * 40,
+        })),
+      },
+    ],
+  })
+
+```
+
+中心分离
+
+在mainjs中引入 `highcharts3dpie.js` 
+
+```js
+import highcharts3dpie from '@/utils/highcharts3dpie'
+```
+
+使用
+
+```js
+const data = ref([
+  { name: '未评价', y: 10, color: '#F7B42C' },
+  { name: '不满意', y: 8, color: '#E9FB71' },
+  { name: '满意', y: 72, color: '#4BED4B' },
+])
+
+const chartOptions = ref({
+  chart: {
+    type: 'pie',
+    options3d: {
+      enabled: true,
+      alpha: 75, // 3D倾斜角度
+      beta: 0,
+      // viewDistance: 60,
+    },
+    backgroundColor: 'transparent', // 透明背景
+  },
+  title: { text: '' },
+  credits: { enabled: false },
+  plotOptions: {
+    pie: {
+      allowPointSelect: true,
+      cursor: 'pointer',
+      depth: 50, // 饼图厚度
+      dataLabels: {
+        enabled: false,
+      },
+      slicedOffset: 25, // 分离距离
+      showInLegend: false,
+    },
+  },
+  series: [
+    {
+      name: '满意度',
+      colorByPoint: true,
+      data: data.value.map(item => ({
+        ...item,
+        sliced: true, // 默认全部分离
+      })),
+    },
+  ],
+})
 ```
 
